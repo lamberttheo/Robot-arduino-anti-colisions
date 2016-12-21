@@ -1,0 +1,100 @@
+#define motorPin1a 3 // Marche avant du premier moteur
+#define motorPin1b 4 // Marche arrière du premier moteur
+#define speedPin1 9 // L293D enable pin pour le premier moteur
+#define motorPin2a 5 // Marche avant du deuxième moteur
+#define motorPin2b 6 // Marche arrière du deuxième moteur
+#define speedPin2 10 // L293D enable pin pour le deuxième moteur
+
+// capteur à ultrasons:
+int trigPin = 12;  
+int echoPin = 11;  
+
+int Mspeed = 0;  // a variable to hold the current speed value
+int seuil = 30; // distance minimale pour laquelle on accepte un obstacle
+
+long distance;
+boolean sensRotation;
+
+void look (void){  // évaluation de la distance de l'obstacle
+
+  long temps;
+
+  // Nous envoyons un signal haut d'une durée de 10 microsecondes, en sandwich
+  // entre deux signaux bas.  Des ultrasons sont émis pendant que le signal est haut
+
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Lors de la réception de l'écho, le module HC-SR04 émet
+  // un signal logique haut (5 v) dont la durée est égale au
+  // temps écoulé entre l'émission et la réception de l'ultrason.
+  pinMode(echoPin, INPUT);
+  temps = pulseIn(echoPin, HIGH);
+
+  distance = temps * 340/(2*10000); 
+  
+}
+
+
+void setup() {
+
+  // réglage des broches à output
+  pinMode(motorPin1a, OUTPUT);
+  pinMode(motorPin1b, OUTPUT);
+  pinMode(speedPin1, OUTPUT);
+  pinMode(motorPin2a, OUTPUT);
+  pinMode(motorPin2b, OUTPUT);
+  pinMode(speedPin2, OUTPUT);
+
+  pinMode(echoPin, INPUT);
+  pinMode(trigPin, OUTPUT);
+  digitalWrite(trigPin, LOW);
+  
+  // on choisit aléatoirement le sens de la rotation
+  look ();
+  randomSeed(distance);
+  sensRotation = random(2);
+}
+
+
+
+void loop() {
+
+  Mspeed = 700; // vitesse du moteur 0 à 1023
+
+  look();  // y a-t-il un obstacle devant?
+
+  if (distance > seuil){
+
+    // marche avant:
+
+    analogWrite(speedPin1, Mspeed); 
+    digitalWrite(motorPin1a, HIGH); 
+    digitalWrite(motorPin1b, LOW); 
+
+    analogWrite(speedPin2, Mspeed); 
+    digitalWrite(motorPin2a, HIGH); 
+    digitalWrite(motorPin2b, LOW); 
+
+    delay(100);
+  }
+
+  else {  // on a détecté un obstacle
+    // nouvelle vérification pour éviter les faux positifs
+    look();
+    if (distance <= seuil){
+      // obstacle confirmé, on tourne sur place
+
+      analogWrite(speedPin1, Mspeed); 
+      digitalWrite(motorPin1a, sensRotation); 
+      digitalWrite(motorPin1b, !(sensRotation)); 
+
+      analogWrite(speedPin2, Mspeed); 
+      digitalWrite(motorPin2a, !(sensRotation)); 
+      digitalWrite(motorPin2b, sensRotation); 
+
+      delay(100);
+    }
+  }
+}
